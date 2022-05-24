@@ -12,12 +12,47 @@ W = [] # The weight function for the discrete set, w(z) for z in E
 
 def main():
     print("hello") 
-
+# Sets the domain denoted E on which the Chebyshev polynomial should be computed. If the weight is not specified it will be set to 1.
+# Symmetries in the set are accounted for via the variables x_symmetry and y_symmetry
+# Run this method before the compute function
+def set_E(base_set, weight = [], x_symmetry = False, y_symmetry = False):
+    global E, W, x_symmetric, y_symmetric
+    E = []
+    W = []
+    x_symmetric = x_symmetry
+    y_symmetric = y_symmetry
+    base_set = [z for z in base_set]
+    if len(weight) == 0:
+        weight = [1 for z in base_set]
+    if len(weight) != len(base_set):
+        print("Error: Weight and Set do not have the same dimension")
+        return
+    
+    if x_symmetric and y_symmetric:
+        for k in range(len(base_set)):
+            if np.real(base_set[k])>=0 and np.imag(base_set[k])>=0:
+                E.append(base_set[k])
+                W.append(weight[k])
+    elif x_symmetric:
+        for k in range(len(base_set)):
+            if np.real(base_set[k])>=0:
+                E.append(base_set[k])
+                W.append(weight[k])
+    elif y_symmetric:
+        for k in range(len(base_set)):
+            if np.imag(base_set[k])>=0:
+                E.append(base_set[k])
+                W.append(weight[k])
+    else:
+        E = base_set
+        W = weight
 # compute computes the Chebyshev polynomial corresponding to the set E which has to be initialized via the set_E function
 # The variable degree specifies the degree of the chebyshev polynomial to be computed
 # threshold denotes the absolute error between the generated linear functional and the generated polynomial. The difference between norms of the Chebyshev polynomial and the generated polynomial lies within this threshold.
-def compute(degree, threshold = 0.00000001, iterations = 1000, extremal_set = [], extremal_angles = [], supress_progress = True, ignore_threshold = False):
+def compute(degree, threshold = 0.00000001, iterations = 1000, init_extremal_set = [], init_extremal_angles = [], supress_progress = True, ignore_threshold = False):
     global is_even
+    extremal_set = init_extremal_set
+    extremal_angles = init_extremal_angles
     is_even = (degree%2 == 0)
     basis = get_basis(degree)
     nbr_of_optimzation_points = get_nbr_of_optimization_points(degree)
@@ -46,7 +81,6 @@ def compute(degree, threshold = 0.00000001, iterations = 1000, extremal_set = []
         if eps<threshold and (ignore_threshold == False):
             print("RELATIVE ERROR < "+str(threshold))
             T_n = np.poly1d([1]+[0 for k in range(degree)])-p_approx
-            extremal_set = []
             return [T_n, [E[k] for k in indices], angles, eps]
         else:
             new_index = max_index
@@ -55,7 +89,6 @@ def compute(degree, threshold = 0.00000001, iterations = 1000, extremal_set = []
             
     print("TIMED OUT, RELATIVE ERROR = "+str(eps))
     T_n = np.poly1d([1]+[0 for k in range(degree)])-p_approx
-    extremal_set = []
     return [T_n, [E[k] for k in indices], angles, eps]
 
 def exchange(r, indices, angles, new_index, new_angle, basis):
@@ -118,37 +151,7 @@ def get_basis(degree):
             basis += [p, 1J*p]
     return basis
 
-def set_E(base_set, weight = [], x_symmetry = False, y_symmetry = False):
-    global E, W, x_symmetric, y_symmetric
-    E = []
-    W = []
-    x_symmetric = x_symmetry
-    y_symmetric = y_symmetry
-    base_set = [z for z in base_set]
-    if len(weight) == 0:
-        weight = [1 for z in base_set]
-    if len(weight) != len(base_set):
-        print("Error: Weight and Set do not have the same dimension")
-        return
-    
-    if x_symmetric and y_symmetric:
-        for k in range(len(base_set)):
-            if np.real(base_set[k])>=0 and np.imag(base_set[k])>=0:
-                E.append(base_set[k])
-                W.append(weight[k])
-    elif x_symmetric:
-        for k in range(len(base_set)):
-            if np.real(base_set[k])>=0:
-                E.append(base_set[k])
-                W.append(weight[k])
-    elif y_symmetric:
-        for k in range(len(base_set)):
-            if np.imag(base_set[k])>=0:
-                E.append(base_set[k])
-                W.append(weight[k])
-    else:
-        E = base_set
-        W = weight
+
 
 def a(index, alpha, basis):
     return np.array([1]+[np.real(cmath.exp(-1J*alpha)*W[index]*p(E[index])) for p in basis])
